@@ -15,6 +15,7 @@ public static class GltfGenerator
     private const float NodeHalfSize = 0.4f;
     private const float TagHalfSize = 0.6f;
     private const float EdgeHalfWidth = 0.05f;
+    private const float TagYOffset = 2.0f;
 
     public static void Generate(
         List<CommitInfo> commits,
@@ -57,7 +58,7 @@ public static class GltfGenerator
         var branchMeshB = BuildBox("BranchBox", NodeHalfSize * 1.3f, matBranch);
         var mergeMeshB = BuildBox("MergeBox", NodeHalfSize * 1.1f, matMerge);
 
-        // Edge mesh: one mesh containing all parent→child connections
+        // Edge mesh: one mesh containing all parent→child connections + tag stems
         var edgeMeshB = new MeshBuilder<VertexPosition>("Edges");
         bool hasEdges = false;
         foreach (var c in commits)
@@ -69,6 +70,15 @@ public static class GltfGenerator
                     AddTube(edgeMeshB, matEdge, positions[c.Hash], parentPos, EdgeHalfWidth);
                     hasEdges = true;
                 }
+            }
+            if (tagSet.Contains(c.Hash))
+            {
+                var commitPos = positions[c.Hash];
+                AddTube(edgeMeshB, matTag,
+                    commitPos + new Vector3(0, NodeHalfSize, 0),
+                    commitPos + new Vector3(0, TagYOffset - TagHalfSize, 0),
+                    EdgeHalfWidth);
+                hasEdges = true;
             }
         }
 
@@ -101,8 +111,8 @@ public static class GltfGenerator
             bool isBranch = branchHeadSet.Contains(c.Hash);
             bool isMerge = c.ParentHashes.Count > 1;
 
-            int meshIdx = isTag ? 1 : isBranch ? 2 : isMerge ? 3 : 0;
-            string nodeType = isTag ? "tag" : isBranch ? "branchHead" : isMerge ? "merge" : "commit";
+            int meshIdx = isBranch ? 2 : isMerge ? 3 : 0;
+            string nodeType = isBranch ? "branchHead" : isMerge ? "merge" : "commit";
 
             var node = scene.CreateNode($"commit_{c.ShortHash}");
             node.Mesh = meshes[meshIdx];
@@ -141,6 +151,30 @@ public static class GltfGenerator
                     (t, Vector3.Zero),
                     (t + 0.15f, Vector3.One),
                     (totalDuration, Vector3.One));
+            }
+
+            // Tag node: rendered above the commit on the Y axis
+            if (isTag)
+            {
+                var tagNode = scene.CreateNode($"tag_{c.ShortHash}");
+                tagNode.Mesh = meshes[1];
+                tagNode.LocalTransform = Matrix4x4.CreateTranslation(
+                    positions[c.Hash] + new Vector3(0, TagYOffset, 0));
+
+                if (t < 0.001f)
+                {
+                    tagNode.WithScaleAnimation("CommitProgression",
+                        (0f, Vector3.One),
+                        (totalDuration, Vector3.One));
+                }
+                else
+                {
+                    tagNode.WithScaleAnimation("CommitProgression",
+                        (0f, Vector3.Zero),
+                        (t, Vector3.Zero),
+                        (t + 0.15f, Vector3.One),
+                        (totalDuration, Vector3.One));
+                }
             }
         }
 
