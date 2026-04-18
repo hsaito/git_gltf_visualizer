@@ -22,7 +22,8 @@ public static class GltfGenerator
         List<BranchInfo> branches,
         List<TagInfo> tags,
         string repoPath,
-        string outputPath)
+        string outputPath,
+        bool animate = false)
     {
         // Sort chronologically (oldest first) for layout
         commits = commits.OrderBy(c => c.Date).ThenBy(c => c.Hash).ToList();
@@ -100,8 +101,8 @@ public static class GltfGenerator
         }
 
         // --- Animation timing ---
-        float timePerCommit = Math.Clamp(30f / Math.Max(commits.Count, 1), 0.05f, 0.5f);
-        float totalDuration = commits.Count * timePerCommit + 0.5f;
+        float timePerCommit = animate ? Math.Clamp(30f / Math.Max(commits.Count, 1), 0.05f, 0.5f) : 0f;
+        float totalDuration = animate ? commits.Count * timePerCommit + 0.5f : 0f;
 
         // --- Commit nodes ---
         for (int i = 0; i < commits.Count; i++)
@@ -135,22 +136,23 @@ public static class GltfGenerator
             node.Extras = JsonNode.Parse(JsonSerializer.Serialize(extras));
 
             // Scale animation: pop-in effect
-            float t = i * timePerCommit;
-            if (t < 0.001f)
+            if (animate)
             {
-                // First commit — always visible
-                node.WithScaleAnimation("CommitProgression",
-                    (0f, Vector3.One),
-                    (totalDuration, Vector3.One));
-            }
-            else
-            {
-                // Hidden until appear time, then scale up over 0.15 s
-                node.WithScaleAnimation("CommitProgression",
-                    (0f, Vector3.Zero),
-                    (t, Vector3.Zero),
-                    (t + 0.15f, Vector3.One),
-                    (totalDuration, Vector3.One));
+                float t = i * timePerCommit;
+                if (t < 0.001f)
+                {
+                    node.WithScaleAnimation("CommitProgression",
+                        (0f, Vector3.One),
+                        (totalDuration, Vector3.One));
+                }
+                else
+                {
+                    node.WithScaleAnimation("CommitProgression",
+                        (0f, Vector3.Zero),
+                        (t, Vector3.Zero),
+                        (t + 0.15f, Vector3.One),
+                        (totalDuration, Vector3.One));
+                }
             }
 
             // Tag node: rendered above the commit on the Y axis
@@ -161,19 +163,23 @@ public static class GltfGenerator
                 tagNode.LocalTransform = Matrix4x4.CreateTranslation(
                     positions[c.Hash] + new Vector3(0, TagYOffset, 0));
 
-                if (t < 0.001f)
+                if (animate)
                 {
-                    tagNode.WithScaleAnimation("CommitProgression",
-                        (0f, Vector3.One),
-                        (totalDuration, Vector3.One));
-                }
-                else
-                {
-                    tagNode.WithScaleAnimation("CommitProgression",
-                        (0f, Vector3.Zero),
-                        (t, Vector3.Zero),
-                        (t + 0.15f, Vector3.One),
-                        (totalDuration, Vector3.One));
+                    float t = i * timePerCommit;
+                    if (t < 0.001f)
+                    {
+                        tagNode.WithScaleAnimation("CommitProgression",
+                            (0f, Vector3.One),
+                            (totalDuration, Vector3.One));
+                    }
+                    else
+                    {
+                        tagNode.WithScaleAnimation("CommitProgression",
+                            (0f, Vector3.Zero),
+                            (t, Vector3.Zero),
+                            (t + 0.15f, Vector3.One),
+                            (totalDuration, Vector3.One));
+                    }
                 }
             }
         }

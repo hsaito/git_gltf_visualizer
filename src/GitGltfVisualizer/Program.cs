@@ -1,45 +1,71 @@
+using System.CommandLine;
+
 namespace GitGltfVisualizer;
 
 class Program
 {
     static int Main(string[] args)
     {
-        string repoPath = args.Length > 0 ? args[0] : Directory.GetCurrentDirectory();
-
-        if (!Directory.Exists(Path.Combine(repoPath, ".git")) &&
-            !File.Exists(Path.Combine(repoPath, ".git")))
+        var repoArg = new Argument<string>("repo")
         {
-            Console.Error.WriteLine($"Error: '{repoPath}' is not a git repository.");
-            return 1;
-        }
+            DefaultValueFactory = _ => Directory.GetCurrentDirectory(),
+            Description = "Path to the git repository (defaults to current directory)"
+        };
 
-        try
+        var animationOption = new Option<bool>("--animation", "-a")
         {
-            Console.WriteLine($"Scanning repository: {repoPath}");
+            Description = "Enable pop-in animation for commits"
+        };
 
-            var commits = GitReader.GetCommits(repoPath);
-            var branches = GitReader.GetBranches(repoPath);
-            var tags = GitReader.GetTags(repoPath);
+        var rootCommand = new RootCommand("Generate a glTF 3D visualization of a git repository's history")
+        {
+            repoArg,
+            animationOption
+        };
 
-            if (commits.Count == 0)
+        rootCommand.SetAction((ParseResult result) =>
+        {
+            string repoPath = result.GetValue(repoArg)!;
+            bool animate = result.GetValue(animationOption);
+
+            if (!Directory.Exists(Path.Combine(repoPath, ".git")) &&
+                !File.Exists(Path.Combine(repoPath, ".git")))
             {
-                Console.Error.WriteLine("No commits found.");
+                Console.Error.WriteLine($"Error: '{repoPath}' is not a git repository.");
                 return 1;
             }
 
-            Console.WriteLine($"  {commits.Count} commits, {branches.Count} branches, {tags.Count} tags");
+            try
+            {
+                Console.WriteLine($"Scanning repository: {repoPath}");
 
-            string outputPath = Path.Combine(repoPath, "git_history.gltf");
-            GltfGenerator.Generate(commits, branches, tags, repoPath, outputPath);
+                var commits = GitReader.GetCommits(repoPath);
+                var branches = GitReader.GetBranches(repoPath);
+                var tags = GitReader.GetTags(repoPath);
 
-            Console.WriteLine($"Output: {outputPath}");
-            Console.WriteLine($"Output: {Path.ChangeExtension(outputPath, ".glb")}");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Error: {ex.Message}");
-            return 1;
-        }
+                if (commits.Count == 0)
+                {
+                    Console.Error.WriteLine("No commits found.");
+                    return 1;
+                }
+
+                Console.WriteLine($"  {commits.Count} commits, {branches.Count} branches, {tags.Count} tags");
+                Console.WriteLine($"  Animation: {(animate ? "on" : "off")}");
+
+                string outputPath = Path.Combine(repoPath, "git_history.gltf");
+                GltfGenerator.Generate(commits, branches, tags, repoPath, outputPath, animate);
+
+                Console.WriteLine($"Output: {outputPath}");
+                Console.WriteLine($"Output: {Path.ChangeExtension(outputPath, ".glb")}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: {ex.Message}");
+                return 1;
+            }
+        });
+
+        return rootCommand.Parse(args, new ParserConfiguration()).Invoke(new InvocationConfiguration());
     }
 }
