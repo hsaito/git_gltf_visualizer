@@ -2,7 +2,7 @@
 
 Generate a 3D glTF representation of a Git repository history.
 
-Current version: `0.1.0`
+Current version: `0.1.1`
 
 The tool reads commits, branches, and tags from a repository and produces:
 
