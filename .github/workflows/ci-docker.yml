@@ -22,10 +22,10 @@ jobs:
         run: dotnet --info
 
       - name: Restore
-        run: dotnet restore git_gltf_visualizer.sln -p:RuntimeIdentifier=
+        run: dotnet restore git_gltf_visualizer.sln -p:RuntimeIdentifier= -p:SelfContained=false
 
       - name: Build
-        run: dotnet build git_gltf_visualizer.sln --configuration Release --no-restore -p:RuntimeIdentifier=
+        run: dotnet build git_gltf_visualizer.sln --configuration Release --no-restore -p:RuntimeIdentifier= -p:SelfContained=false
 
       - name: Test
-        run: dotnet test git_gltf_visualizer.sln --configuration Release --no-build --verbosity normal -p:RuntimeIdentifier=
+        run: dotnet test git_gltf_visualizer.sln --configuration Release --no-build --verbosity normal -p:RuntimeIdentifier= -p:SelfContained=false
