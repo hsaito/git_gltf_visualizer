@@ -42,11 +42,12 @@ public static class GitReader
         return output;
     }
 
-    public static List<CommitInfo> GetCommits(string repoPath)
+    public static List<CommitInfo> GetCommits(string repoPath, int? last = null)
     {
         // Use git's %x1f hex escape for unit separator — safe against special chars in fields
+        string countArg = last.HasValue ? $" -n {last.Value}" : string.Empty;
         string output = RunGit(
-            "log --all --format=\"%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%P%x1f%s\"",
+            $"log --all{countArg} --format=\"%H%x1f%h%x1f%an%x1f%ae%x1f%aI%x1f%P%x1f%s\"",
             repoPath);
 
         var commits = new List<CommitInfo>();

@@ -94,6 +94,45 @@ public class GltfGeneratorTests
         Assert.Contains("tag_2222222", nodeNames);
     }
 
+    [Fact]
+    public void Generate_WithMissingParent_StillCreatesDanglingEdge()
+    {
+        using var temp = new TempDirectory();
+        string outputPath = Path.Combine(temp.Path, "history.gltf");
+
+        var commits = new List<CommitInfo>
+        {
+            new(
+                Hash: "2222222222222222222222222222222222222222",
+                ShortHash: "2222222",
+                Author: "Test Author",
+                AuthorEmail: "test@example.com",
+                Date: new DateTimeOffset(2025, 1, 2, 0, 0, 0, TimeSpan.Zero),
+                Message: "second commit",
+                ParentHashes: new List<string> { "1111111111111111111111111111111111111111" })
+        };
+
+        var branches = new List<BranchInfo>
+        {
+            new("main", commits[0].Hash, false)
+        };
+
+        var tags = new List<TagInfo>();
+
+        GltfGenerator.Generate(commits, branches, tags, temp.Path, outputPath, animate: false);
+
+        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(outputPath));
+        Assert.True(doc.RootElement.TryGetProperty("nodes", out var nodes));
+
+        var nodeNames = nodes.EnumerateArray()
+            .Where(n => n.TryGetProperty("name", out _))
+            .Select(n => n.GetProperty("name").GetString())
+            .Where(n => n is not null)
+            .ToList();
+
+        Assert.Contains("Edges", nodeNames);
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

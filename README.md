@@ -47,6 +47,12 @@ Enable animation:
 dotnet run --project src/GitGltfVisualizer -- <repo-path> --animation
 ```
 
+Limit visualization to the most recent commits:
+
+```bash
+dotnet run --project src/GitGltfVisualizer -- <repo-path> --last 200
+```
+
 Short form:
 
 ```bash
@@ -70,11 +76,12 @@ Output executable:
 ## Command line usage
 
 ```text
-GitGltfVisualizer [repo] [--animation|-a]
+GitGltfVisualizer [repo] [--animation|-a] [--last|-l <N>]
 ```
 
 - `repo`: Path to a Git repository (defaults to current directory)
 - `--animation`, `-a`: Enable pop-in animation for commit/tag nodes
+- `--last`, `-l <N>`: Limit visualization to the most recent `N` commits
 
 ## Output
 

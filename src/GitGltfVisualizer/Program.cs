@@ -17,16 +17,29 @@ class Program
             Description = "Enable pop-in animation for commits"
         };
 
+        var lastOption = new Option<int?>("--last", "-l")
+        {
+            Description = "Limit visualization to the most recent N commits"
+        };
+
         var rootCommand = new RootCommand("Generate a glTF 3D visualization of a git repository's history")
         {
             repoArg,
-            animationOption
+            animationOption,
+            lastOption
         };
 
         rootCommand.SetAction((ParseResult result) =>
         {
             string repoPath = result.GetValue(repoArg)!;
             bool animate = result.GetValue(animationOption);
+            int? last = result.GetValue(lastOption);
+
+            if (last.HasValue && last.Value <= 0)
+            {
+                Console.Error.WriteLine("Error: --last must be greater than 0.");
+                return 1;
+            }
 
             if (!Directory.Exists(Path.Combine(repoPath, ".git")) &&
                 !File.Exists(Path.Combine(repoPath, ".git")))
@@ -39,7 +52,7 @@ class Program
             {
                 Console.WriteLine($"Scanning repository: {repoPath}");
 
-                var commits = GitReader.GetCommits(repoPath);
+                var commits = GitReader.GetCommits(repoPath, last);
                 var branches = GitReader.GetBranches(repoPath);
                 var tags = GitReader.GetTags(repoPath);
 
@@ -51,6 +64,10 @@ class Program
 
                 Console.WriteLine($"  {commits.Count} commits, {branches.Count} branches, {tags.Count} tags");
                 Console.WriteLine($"  Animation: {(animate ? "on" : "off")}");
+                if (last.HasValue)
+                {
+                    Console.WriteLine($"  Commit window: last {last.Value}");
+                }
 
                 string outputPath = Path.Combine(repoPath, "git_history.gltf");
                 GltfGenerator.Generate(commits, branches, tags, repoPath, outputPath, animate);

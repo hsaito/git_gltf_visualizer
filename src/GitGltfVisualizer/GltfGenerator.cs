@@ -71,6 +71,20 @@ public static class GltfGenerator
                     AddTube(edgeMeshB, matEdge, positions[c.Hash], parentPos, EdgeHalfWidth);
                     hasEdges = true;
                 }
+                else if (positions.TryGetValue(c.Hash, out var commitPos))
+                {
+                    // Parent commit is outside the visible window (for example with --last).
+                    // Draw a short dangling segment so the truncated connection is still visible.
+                    int parentIndex = c.ParentHashes.IndexOf(ph);
+                    int parentCount = Math.Max(c.ParentHashes.Count, 1);
+                    float normalized = parentCount == 1
+                        ? 0f
+                        : (parentIndex / (float)(parentCount - 1)) * 2f - 1f;
+                    float sideOffset = normalized * (LaneSpacing * 0.4f);
+                    var truncatedParentPos = commitPos + new Vector3(sideOffset, 0, -CommitSpacing * 0.9f);
+                    AddTube(edgeMeshB, matEdge, commitPos, truncatedParentPos, EdgeHalfWidth);
+                    hasEdges = true;
+                }
             }
             if (tagSet.Contains(c.Hash))
             {
